@@ -102,6 +102,8 @@ if __name__ == "__main__":
         sys.exit(f"{filename} not a valid path; must end in .mrc")
 
     for i in range(2,n):
+        if '-h' in sys.argv:
+            sys.exit("python subjauth.py {input file path} [-sh {sh csv path}] [-gf {gf cvs path}]")
         if sys.argv[i] == "-sh":
             sh = True
             if i+1 < n and sys.argv[i+1][0] != "-":
