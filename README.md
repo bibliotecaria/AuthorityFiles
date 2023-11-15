@@ -33,6 +33,9 @@ The output of the CSV file contains three columns:
 + scope note, if one exists
   + MARC field 680 ($i and possible $a subfields)
 
-**Maintaners**
+**Contributors**
+
++ Melanie Polutta: [@bibliotecaria](https://github.com/bibliotecaria)
++ Bobbi Fox: [@bobbi-SMR](https://github.com/bobbi-SMR)
 
  
