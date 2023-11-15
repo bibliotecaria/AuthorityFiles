@@ -21,3 +21,18 @@ The current functions cover:
 | ------------- | ------------- |
 | -sh  | Subject authority records; requires a filepath to output csv file  |
 | -gf  | Genre/Form authority records; requires a filepath to output csv file |
+
+**The CSV file**
+
+The output of the CSV file contains three columns: 
++ LCCNs
+  + MARC field 010 $a
++ the text of the heading
+  + MARC field 185 $v (with possible additional subfields $v or $x) for LCSH form subdivisions
+  + MARC field 155 $a for LCGFT terms
++ scope note, if one exists
+  + MARC field 680 ($i and possible $a subfields)
+
+**Maintaners**
+
+ 
