@@ -127,3 +127,10 @@ if __name__ == "__main__":
         processfile(filename, "sh", shfile)
     if gf:
         processfile(filename, "gf", gffile)
+
+'''
+Add new option -key to search a keyword in subject headings (1XX) or broader or related terms (5XX)
+If -key is entered, enter the keyword. Error check to ensure that -key is followed by a string and that -sh is followed by a path.
+Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note).
+'''
+
