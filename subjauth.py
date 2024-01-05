@@ -26,6 +26,39 @@ def lccnno(record):
   lccn = record['010']['a'].strip()
   return (lccn)
 
+def analyze_subfields(field, infound, keyword):
+    textstring = ""
+    found = infound
+    subfields = field.subfields
+    keys = subfields[::2]
+    values = subfields[1::2]
+    for i in range(0, len(keys)):
+        if not found:
+            words = values[i].split()
+            for word in words:
+                if word.startswith(keyword):
+                    found = True
+                    break
+        textstring = textstring + "$" + keys[i] + " " + values[i] + " "
+    textstring = textstring.strip()
+    textstring = unicodedata.normalize("NFC", textstring)
+    return([found, textstring])
+
+
+def fetch_keyword(keyword, lccn, record):
+    """pulls out headings for keywords terms and scope note"""
+    header = ""
+    note = ""
+    for num in ["150", "151", "155", "110", "100", "130", "111", "162"]:
+        if record[num] is not None:
+            found, header = analyze_subfields(found, record[num], keyword)
+    print(header)
+    #will take care of 4XX and 5XX next time 
+    if record["680"] is not None and record["680"]["i"] is not None:
+        found, note = analyze_subfields(found, record["680"], keyword)
+    return([lccn, header, uf, bt, note])
+
+
 def fetch_gf(lccn, record):
     """pulls out headings for genre/form (gf) terms and scope note"""
     header = ""
