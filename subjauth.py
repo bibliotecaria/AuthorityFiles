@@ -52,11 +52,26 @@ def fetch_keyword(keyword, lccn, record):
     for num in ["150", "151", "155", "110", "100", "130", "111", "162"]:
         if record[num] is not None:
             found, header = analyze_subfields(found, record[num], keyword)
+            break
     print(header)
-    #will take care of 4XX and 5XX next time 
+    uf = ""
+    for num in ["450", "451", "455", "410", "400", "430", "411", "462"]:
+        if record[num] is not None:
+            found, uft = analyze_subfields(found, record[num], keyword)
+            uf = uf + uft + " | " 
+    print(uf)
+    bt = ""
+    for num in ["550", "551", "555", "510", "500", "530", "511", "562"]:
+        if record[num] is not None:
+            found, btt = analyze_subfields(found, record[num], keyword)
+            bt = bt + btt + " | " 
+    print(bt)
     if record["680"] is not None and record["680"]["i"] is not None:
         found, note = analyze_subfields(found, record["680"], keyword)
-    return([lccn, header, uf, bt, note])
+    if found:
+        return([lccn, header, uf, bt, note])
+    else:
+        return(None)
 
 
 def fetch_gf(lccn, record):
@@ -107,6 +122,7 @@ def processrecord(filename, type):
     for record in marc_gen:
         lccn = lccnno(record)
         if lccn.startswith(type):
+            #more options to allow for keyword search in all record types 2024-01-26
             if type == "sh" and record["185"] is not None and record["185"]["v"] is not None:
                 yield(fetch_sh(lccn, record))
             elif type == "gf" and record["155"] is not None and record["155"]["a"] is not None:
@@ -118,21 +134,23 @@ def processfile(filename, type, csvfile):
     with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
         wr = csv.writer(myfile)
         for line in processrecord(filename, type):
-            wr.writerow(line)
+            if line is not None:
+                wr.writerow(line)
 
 if __name__ == "__main__":
     # command line arguments
     n = len(sys.argv)
     if n < 4:
-        sys.exit("Missing arguments. \n python subjauth.py {input file path} [-sh {sh csv path}] [-gf {gf cvs path}]")
-    
+        sys.exit("Missing arguments. \n python subjauth.py {input file path} [[-sh {sh csv path}] | [-gf {gf cvs path}]] [-key {keyword string}]")
+        #examine syntax to clarify that key is optional and sh or gf is required 2024-01-26
+    key = None    
     sh = False
     gf = False
     shfile = ""
     gffile = ""
     filename = sys.argv[1]
     if '-h' in sys.argv:
-        sys.exit("python subjauth.py {input file path} [-sh {sh csv path}] [-gf {gf cvs path}]")
+        sys.exit("python subjauth.py {input file path} [[-sh {sh csv path}] | [-gf {gf cvs path}]] [-key {keyword string}]")
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
 
