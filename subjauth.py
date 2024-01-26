@@ -5,6 +5,8 @@ import unicodedata
 from pymarc import MARCReader
 from pymarc.exceptions import PymarcException
 
+HELP = "python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] <csv path> [-key <keyword string>]"
+
 def reading_marc(filename):
     """Reads the whole MARC file"""
     try:
@@ -45,88 +47,63 @@ def analyze_subfields(field, infound, keyword):
     return([found, textstring])
 
 
-def fetch_keyword(keyword, lccn, record):
-    """pulls out headings for keywords terms and scope note"""
+def fetch_results(lccn, record, keyword):
+    """pulls out fields for keyword terms and scope note"""
     header = ""
     note = ""
-    for num in ["150", "151", "155", "110", "100", "130", "111", "162"]:
+    if keyword == "":
+        found = True
+    for num in ["100", "110", "111", "130", "150", "151", "155", "162", "185"]:
         if record[num] is not None:
-            found, header = analyze_subfields(found, record[num], keyword)
+            found, header = analyze_subfields(record[num], found, keyword)
             break
     print(header)
     uf = ""
-    for num in ["450", "451", "455", "410", "400", "430", "411", "462"]:
+    for num in ["400", "410", "411", "430", "450", "451", "455", "462", "485"]:
         if record[num] is not None:
-            found, uft = analyze_subfields(found, record[num], keyword)
+            found, uft = analyze_subfields(record[num], found, keyword)
             uf = uf + uft + " | " 
     print(uf)
     bt = ""
-    for num in ["550", "551", "555", "510", "500", "530", "511", "562"]:
+    for num in ["500", "510", "511", "530", "550", "551", "555", "562", "585"]:
         if record[num] is not None:
-            found, btt = analyze_subfields(found, record[num], keyword)
+            found, btt = analyze_subfields(record[num], found, keyword)
             bt = bt + btt + " | " 
     print(bt)
     if record["680"] is not None and record["680"]["i"] is not None:
-        found, note = analyze_subfields(found, record["680"], keyword)
+        found, note = analyze_subfields(record["680"], found, keyword)
     if found:
         return([lccn, header, uf, bt, note])
     else:
         return(None)
 
 
-def fetch_gf(lccn, record):
-    """pulls out headings for genre/form (gf) terms and scope note"""
-    header = ""
-    note = ""
-    subfields = record["155"].subfields
-    keys = subfields[::2]
-    values = subfields[1::2]
-    for i in range(0, len(keys)):
-        header = header + "$" + keys[i] + " " + values[i] + " "
-    header = header.strip()
-    header = unicodedata.normalize("NFC", header)
-    print(header)
-    if record["680"] is not None and record["680"]["i"] is not None:
-        subfields = record["680"].subfields
-        keys = subfields[::2]
-        values = subfields[1::2]
-        for i in range(0, len(keys)):
-            note = note + " " + values[i]
-        note = unicodedata.normalize("NFC", note)
-    return([lccn, header, note])
-
-def fetch_sh(lccn, record):
-    """pulls out form subdivisions for subject (sh) headings and scope note"""
-    header = ""
-    note = ""
-    subfields = record["185"].subfields
-    keys = subfields[::2]
-    values = subfields[1::2]
-    for i in range(0, len(keys)):
-        header = header + "$" + keys[i] + " " + values[i] + " "
-    header = header.strip()
-    header = unicodedata.normalize("NFC", header)
-    if record["680"] is not None and record["680"]["i"] is not None:
-        subfields = record["680"].subfields
-        keys = subfields[::2]
-        values = subfields[1::2]
-        for i in range(0, len(keys)):
-            note = note + " " + values[i]
-        note = unicodedata.normalize("NFC", note)
-    return([lccn, header, note])
-
-
-def processrecord(filename, type):
+def processrecord(filename, type, keyword):
     """processes records in file based on type, whch is either "gf" or "sh" """
     marc_gen = reading_marc(filename)
     for record in marc_gen:
+        result = None
         lccn = lccnno(record)
-        if lccn.startswith(type):
-            #more options to allow for keyword search in all record types 2024-01-26
-            if type == "sh" and record["185"] is not None and record["185"]["v"] is not None:
-                yield(fetch_sh(lccn, record))
+        prefix = type
+        if type == "fd":
+            prefix = "sh"
+        if lccn.startswith(prefix):
+            if type == "fd" and record["185"] is not None and record["185"]["v"] is not None:
+                result = fetch_results(lccn, record, keyword)
+            if type == "gd" and record["185"] is not None and record["185"]["x"] is not None:
+                result = fetch_results(lccn, record, keyword)
+            elif type == "sh":
+                result = fetch_results(lccn, record, keyword)
+            elif type == "sj":
+                result = fetch_results(lccn, record, keyword)
+            elif type == "dg" and record["150"] is not None and record["150"]["a"] is not None:
+                result = fetch_results(lccn, record, keyword)
+            elif type == "mp" and record["162"] is not None and record["162"]["a"] is not None:
+                result = fetch_results(lccn, record, keyword)
             elif type == "gf" and record["155"] is not None and record["155"]["a"] is not None:
-                yield(fetch_gf(lccn, record))
+                result = fetch_results(lccn, record, keyword)
+            if result is not None and result[1] is not None:
+                yield(result)
 
 
 def processfile(filename, type, csvfile):
@@ -137,12 +114,12 @@ def processfile(filename, type, csvfile):
             if line is not None:
                 wr.writerow(line)
 
+#update help instructions for command line based on changes to file; also ReadMe file; also change processing of command line
 if __name__ == "__main__":
     # command line arguments
     n = len(sys.argv)
     if n < 4:
-        sys.exit("Missing arguments. \n python subjauth.py {input file path} [[-sh {sh csv path}] | [-gf {gf cvs path}]] [-key {keyword string}]")
-        #examine syntax to clarify that key is optional and sh or gf is required 2024-01-26
+        sys.exit("Missing arguments. \n" + HELP)
     key = None    
     sh = False
     gf = False
@@ -150,7 +127,7 @@ if __name__ == "__main__":
     gffile = ""
     filename = sys.argv[1]
     if '-h' in sys.argv:
-        sys.exit("python subjauth.py {input file path} [[-sh {sh csv path}] | [-gf {gf cvs path}]] [-key {keyword string}]")
+        sys.exit(HELP)
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
 
