@@ -79,7 +79,7 @@ def fetch_results(lccn, record, keyword):
 
 
 def processrecord(filename, type, keyword):
-    """processes records in file based on type, whch is either "gf" or "sh" """
+    """processes records in file based on type, whch is [sh | fd | gd | dg | gf | sj | mp] """
     marc_gen = reading_marc(filename)
     for record in marc_gen:
         result = None
@@ -106,55 +106,44 @@ def processrecord(filename, type, keyword):
                 yield(result)
 
 
-def processfile(filename, type, csvfile):
+def processfile(filename, type, csvfile, keyword):
     """looks at each record according to type to extract data to a csv file"""
-    with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
-        wr = csv.writer(myfile)
-        for line in processrecord(filename, type):
-            if line is not None:
-                wr.writerow(line)
+    try:
+        with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
+            wr = csv.writer(myfile)
+            for line in processrecord(filename, type, keyword):
+                if line is not None:
+                    wr.writerow(line)
+    except Exception as e:
+        sys.exit(f"Problem found in writing to {filename}: {e.__class__.__doc__} [{e.__class__.__name__}]")
 
-#update help instructions for command line based on changes to file; also ReadMe file; also change processing of command line
 if __name__ == "__main__":
     # command line arguments
     n = len(sys.argv)
     if n < 4:
         sys.exit("Missing arguments. \n" + HELP)
-    key = None    
-    sh = False
-    gf = False
-    shfile = ""
-    gffile = ""
+    keyword = None    
     filename = sys.argv[1]
+    type = sys.argv[3]
+    csvfile = sys.argv[4]
     if '-h' in sys.argv:
         sys.exit(HELP)
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
-
-    for i in range(2,n):
-        
-        if sys.argv[i] == "-sh":
-            sh = True
-            if i+1 < n and sys.argv[i+1][0] != "-":
-                shfile = sys.argv[i+1]
-            else:
-                sh = False
-                print("No shfile specified")
-        if sys.argv[i] == "-gf":
-            gf = True
-            if i+1 < n and sys.argv[i+1][0] != "-":
-                gffile = sys.argv[i+1]
-            else:
-                gf = False
-                print("No gffile specified")   
-    if not (sh or gf):
-        sys.exit("No authority record type specified")
+    if sys.argv[2] != "-type":
+        sys.exit("No type specified")
+    if type not in ["sh", "fd", "gd", "dg", "gf", "sj", "mp"]:
+        sys.exit(f"{type} not supported as a type. {HELP}")
+    if n >= 6:
+        if sys.argv[5] == "-key":
+            keyword = sys.argv[6]
+        else:
+            print("'-key' not found; no keyword will be used. " + HELP)
+#update to tell them what we are about to do; also ReadMe file for hep; also change processing of command line
     
+
     """functions that process the file by type"""
-    if sh:
-        processfile(filename, "sh", shfile)
-    if gf:
-        processfile(filename, "gf", gffile)
+    processfile(filename, type, csvfile, keyword)
 
 '''
 Add new option -key to search a keyword in subject headings (1XX) or broader or related terms (5XX)
