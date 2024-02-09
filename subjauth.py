@@ -1,11 +1,12 @@
 """Extracts genre/form data from LCGFT and LCSH"""
 import sys
+import os
 import csv
 import unicodedata
 from pymarc import MARCReader
 from pymarc.exceptions import PymarcException
 
-HELP = "python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] <csv path> [-key <keyword string>]"
+HELP = "python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>]"
 
 def reading_marc(filename):
     """Reads the whole MARC file"""
@@ -126,20 +127,29 @@ if __name__ == "__main__":
     filename = sys.argv[1]
     type = sys.argv[3]
     csvfile = sys.argv[4]
-    if '-h' in sys.argv:
+    if '-h' or '--help' in sys.argv:
         sys.exit(HELP)
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
+    n = len(sys.argv)
+    for i in range(2,n):
+        if sys.argv[i] == '-type':
+
+        
     if sys.argv[2] != "-type":
         sys.exit("No type specified")
     if type not in ["sh", "fd", "gd", "dg", "gf", "sj", "mp"]:
-        sys.exit(f"{type} not supported as a type. {HELP}")
+        sys.exit(f"{type} not supported as a type. \n {HELP}")
     if n >= 6:
         if sys.argv[5] == "-key":
-            keyword = sys.argv[6]
+            if n >= 7:
+                keyword = sys.argv[6]
+            else:
+                print(" '-key' detected, but no keyword found. \n " + HELP)
         else:
-            print("'-key' not found; no keyword will be used. " + HELP)
-#update to tell them what we are about to do; also ReadMe file for hep; also change processing of command line
+            print("'-key' not found; no keyword will be used. \n " + HELP)
+#update to tell them what we are about to do; also ReadMe file for help 2024-02-09; also change processing of command line
+#use argparse to develop command line without required order: three arguments needed; add testing for existence of marc file (os.path.exists) 2024-02-16
     
 
     """functions that process the file by type"""
