@@ -1,6 +1,7 @@
 """Extracts genre/form data from LCGFT and LCSH"""
 import sys
 import os
+import argparse
 import csv
 import unicodedata
 from pymarc import MARCReader
@@ -120,44 +121,29 @@ def processfile(filename, type, csvfile, keyword):
 
 if __name__ == "__main__":
     # command line arguments
-    n = len(sys.argv)
-    if n < 4:
-        sys.exit("Missing arguments. \n" + HELP)
+    parser = argparse.ArgumentParser(description='Get options.')
+    parser.add_argument("filename", help="Path to marc file required.")
+    parser.add_argument("-type", choices=["sh", "fd", "gd", "dg", "gf", "sj", "mp"], required=True)
+    parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
+    parser.add_argument("-o", help="Path to csv file output required.", required=True)
+    args = parser.parse_args(sys.argv)
+    
     keyword = None    
-    filename = sys.argv[1]
-    type = sys.argv[3]
-    csvfile = sys.argv[4]
-    if '-h' or '--help' in sys.argv:
-        sys.exit(HELP)
+    filename = args.filename
+    type = args.type
+    csvfile = args.o
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
-    n = len(sys.argv)
-    for i in range(2,n):
-        if sys.argv[i] == '-type':
+    if not os.path.exists(filename):
+        sys.exit(f"{filename} not found")
+    if args.key:
+        keyword = args.key 
+#update to tell them what we are about to do; also ReadMe file for help 2024-02-09
 
-        
-    if sys.argv[2] != "-type":
-        sys.exit("No type specified")
-    if type not in ["sh", "fd", "gd", "dg", "gf", "sj", "mp"]:
-        sys.exit(f"{type} not supported as a type. \n {HELP}")
-    if n >= 6:
-        if sys.argv[5] == "-key":
-            if n >= 7:
-                keyword = sys.argv[6]
-            else:
-                print(" '-key' detected, but no keyword found. \n " + HELP)
-        else:
-            print("'-key' not found; no keyword will be used. \n " + HELP)
-#update to tell them what we are about to do; also ReadMe file for help 2024-02-09; also change processing of command line
-#use argparse to develop command line without required order: three arguments needed; add testing for existence of marc file (os.path.exists) 2024-02-16
-    
-
-    """functions that process the file by type"""
     processfile(filename, type, csvfile, keyword)
 
 '''
-Add new option -key to search a keyword in subject headings (1XX) or broader or related terms (5XX)
-If -key is entered, enter the keyword. Error check to ensure that -key is followed by a string and that -sh is followed by a path.
+figure out why filename isn't recognized as an argument 2024-02-23
 Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note).
 '''
 
