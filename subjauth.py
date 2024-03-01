@@ -15,6 +15,8 @@ def reading_marc(filename):
         with open(filename, 'rb') as fh:
             reader = MARCReader(fh, to_unicode=True, force_utf8=True)
             for record in reader:
+                if record is None:
+                    sys.exit("Problem with MARC file. Record is 'None'.")
                 yield record
     except FileNotFoundError:
         sys.exit(f"MARC file {filename} not found")
