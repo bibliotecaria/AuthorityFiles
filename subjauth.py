@@ -114,10 +114,14 @@ def processfile(filename, type, csvfile, keyword):
         with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
             wr = csv.writer(myfile)
             for line in processrecord(filename, type, keyword):
-                if line is not None:
-                    wr.writerow(line)
+                print(line.__class__.__name__)
+            #     try:
+            #         if line is not None:
+            #             wr.writerow(line)
+            #     except Exception as e:
+            #         sys.exit(f"Problem writing line '{line}' {e.__class__.__doc__} ")
     except Exception as e:
-        sys.exit(f"Problem found in writing to {filename}: {e.__class__.__doc__} [{e.__class__.__name__}]")
+        sys.exit(f"Problem found in writing to {csvfile}: {e.__class__.__doc__} [{e.__class__.__name__}]")
 
 if __name__ == "__main__":
     # command line arguments
@@ -125,13 +129,15 @@ if __name__ == "__main__":
     parser.add_argument("filename", help="Path to marc file required.")
     parser.add_argument("-type", choices=["sh", "fd", "gd", "dg", "gf", "sj", "mp"], required=True)
     parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
-    parser.add_argument("-o", help="Path to csv file output required.", required=True)
-    args = parser.parse_args(sys.argv)
+    parser.add_argument("-o", help="Path to csv file output required.", required=True, metavar="output")
+    args = parser.parse_args()
+    print("we parsed")
     
     keyword = None    
     filename = args.filename
     type = args.type
     csvfile = args.o
+    print(f"{filename} {type} {csvfile} {keyword}")
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
     if not os.path.exists(filename):
