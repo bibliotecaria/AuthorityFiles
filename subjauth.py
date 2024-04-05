@@ -8,6 +8,8 @@ from pymarc import MARCReader
 from pymarc.exceptions import PymarcException
 
 HELP = "python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>]"
+reccounter = 0
+hitcounter = 0
 
 def reading_marc(filename):
     """Reads the whole MARC file"""
@@ -84,8 +86,10 @@ def fetch_results(lccn, record, keyword):
 
 def processrecord(filename, type, keyword):
     """processes records in file based on type, whch is [sh | fd | gd | dg | gf | sj | mp] """
+    global reccounter
     marc_gen = reading_marc(filename)
     for record in marc_gen:
+        reccounter = reccounter + 1
         result = None
         lccn = lccnno(record)
         prefix = type
@@ -112,10 +116,12 @@ def processrecord(filename, type, keyword):
 
 def processfile(filename, type, csvfile, keyword):
     """looks at each record according to type to extract data to a csv file"""
+    global hitcounter
     try:
         with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
             wr = csv.writer(myfile)
             for line in processrecord(filename, type, keyword):
+                hitcounter = hitcounter + 1
                 print(line.__class__.__name__)
             #     try:
             #         if line is not None:
