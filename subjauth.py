@@ -31,7 +31,11 @@ def reading_marc(filename):
 
 def lccnno(record):
   """pulls out 010 $a from the fields collection as an identifier"""
-  lccn = record['010']['a'].strip()
+  try:
+      lccn = record['010']['a'].strip()
+  except Exception:
+      print(f"lccno not found in recno {reccounter}")
+      lccn = ""
   return (lccn)
 
 def analyze_subfields(field, infound, keyword):
@@ -60,9 +64,12 @@ def fetch_results(lccn, record, keyword):
     if keyword == "":
         found = True
     for num in ["100", "110", "111", "130", "150", "151", "155", "162", "185"]:
-        if record[num] is not None:
-            found, header = analyze_subfields(record[num], found, keyword)
-            break
+        try:
+            if record[num] is not None:
+                found, header = analyze_subfields(record[num], found, keyword)
+                break
+        except Exception as e:
+            print(f"{reccounter} has KeyError problem looking for {num}")
     print(header)
     uf = ""
     for num in ["400", "410", "411", "430", "450", "451", "455", "462", "485"]:
@@ -123,11 +130,11 @@ def processfile(filename, type, csvfile, keyword):
             for line in processrecord(filename, type, keyword):
                 hitcounter = hitcounter + 1
                 print(line.__class__.__name__)
-            #     try:
-            #         if line is not None:
-            #             wr.writerow(line)
-            #     except Exception as e:
-            #         sys.exit(f"Problem writing line '{line}' {e.__class__.__doc__} ")
+                try:
+                    if line is not None:
+                        wr.writerow(line)
+                except Exception as e:
+                    sys.exit(f"Problem writing line '{line}' {e.__class__.__doc__} ")
     except Exception as e:
         sys.exit(f"Problem found in writing to {csvfile}: {e.__class__.__doc__} [{e.__class__.__name__}]")
 
@@ -155,6 +162,7 @@ if __name__ == "__main__":
 #update to tell them what we are about to do; also ReadMe file for help 2024-02-09
 
     processfile(filename, type, csvfile, keyword)
+    print(f"{reccounter} read, {hitcounter} found")
 
 '''
 figure out why filename isn't recognized as an argument 2024-02-23
