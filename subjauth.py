@@ -42,48 +42,47 @@ def analyze_subfields(field, infound, keyword):
     textstring = ""
     found = infound
     subfields = field.subfields
-    keys = subfields[::2]
-    values = subfields[1::2]
-    for i in range(0, len(keys)):
+    for subfield in subfields:
+        key = subfield["code"]
+        value = subfield["value"]
         if not found:
-            words = values[i].split()
+            words = value.split() 
             for word in words:
                 if word.startswith(keyword):
                     found = True
                     break
-        textstring = textstring + "$" + keys[i] + " " + values[i] + " "
+        textstring = textstring + "$" + key + " " + value + " "
     textstring = textstring.strip()
     textstring = unicodedata.normalize("NFC", textstring)
     return([found, textstring])
 
+def fetch_fieldinfo(found, list):
+    """find data in MARC fields"""
+    value = ""
+    returnval = ""
+    for field in list:
+        if field is not None:
+            found,value = analyze_subfields(field, found, keyword)
+            returnval= returnval + value + " | " 
+    return([found, returnval])
 
 def fetch_results(lccn, record, keyword):
     """pulls out fields for keyword terms and scope note"""
     header = ""
     note = ""
+    found = False
     if keyword == "":
         found = True
-    for num in ["100", "110", "111", "130", "150", "151", "155", "162", "185"]:
-        try:
-            if record[num] is not None:
-                found, header = analyze_subfields(record[num], found, keyword)
-                break
-        except Exception as e:
-            print(f"{reccounter} has KeyError problem looking for {num}")
+    headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "185")
+    found, header = fetch_fieldinfo(found, headers)
     print(header)
-    uf = ""
-    for num in ["400", "410", "411", "430", "450", "451", "455", "462", "485"]:
-        if record[num] is not None:
-            found, uft = analyze_subfields(record[num], found, keyword)
-            uf = uf + uft + " | " 
+    ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "485")
+    found, uf = fetch_fieldinfo(found, ufs)
     print(uf)
-    bt = ""
-    for num in ["500", "510", "511", "530", "550", "551", "555", "562", "585"]:
-        if record[num] is not None:
-            found, btt = analyze_subfields(record[num], found, keyword)
-            bt = bt + btt + " | " 
+    bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "585")
+    found, bt = fetch_fieldinfo(found, bts)
     print(bt)
-    if record["680"] is not None and record["680"]["i"] is not None:
+    if record.get_fields("680") is not None and record["680"]["i"] is not None:
         found, note = analyze_subfields(record["680"], found, keyword)
     if found:
         return([lccn, header, uf, bt, note])
