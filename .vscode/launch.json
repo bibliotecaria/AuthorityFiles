@@ -6,12 +6,12 @@
     "configurations": [
         {
             "name": "Python Debugger: Current File with Arguments",
-            "type": "debugpy",
+            "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal",
+            "console": "internalConsole",
             "justMyCode": false,
-            "args": ["C:/Users/bibli/Downloads/records.mrc", "-type", "dg", "-o", "C:/Users/bibli/OneDrive/Documents/work/MARC/dg.csv"]
+            "args": ["C:/Users/bibli/Downloads/LCSH_2024-01-01/LCSH_2024-01-01.mrc", "-type", "sh", "-o", "C:/Users/bibli/OneDrive/Documents/work/MARC/sh.csv"]
         }
     ]
 }
