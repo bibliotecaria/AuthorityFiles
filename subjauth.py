@@ -43,9 +43,9 @@ def analyze_subfields(field, infound, keyword):
     found = infound
     subfields = field.subfields
     for subfield in subfields:
-        key = subfield["code"]
-        value = subfield["value"]
-        if not found:
+        key = subfield[0]
+        value = subfield[1]
+        if keyword is not None and not found:
             words = value.split() 
             for word in words:
                 if word.startswith(keyword):
@@ -56,7 +56,7 @@ def analyze_subfields(field, infound, keyword):
     textstring = unicodedata.normalize("NFC", textstring)
     return([found, textstring])
 
-def fetch_fieldinfo(found, list):
+def fetch_fieldinfo(found, list, keyword):
     """find data in MARC fields"""
     value = ""
     returnval = ""
@@ -71,19 +71,19 @@ def fetch_results(lccn, record, keyword):
     header = ""
     note = ""
     found = False
-    if keyword == "":
+    if keyword is None:
         found = True
     headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "185")
-    found, header = fetch_fieldinfo(found, headers)
+    found, header = fetch_fieldinfo(found, headers, keyword)
     print(header)
     ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "485")
-    found, uf = fetch_fieldinfo(found, ufs)
+    found, uf = fetch_fieldinfo(found, ufs, keyword)
     print(uf)
     bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "585")
-    found, bt = fetch_fieldinfo(found, bts)
+    found, bt = fetch_fieldinfo(found, bts, keyword)
     print(bt)
-    if record.get_fields("680") is not None and record["680"]["i"] is not None:
-        found, note = analyze_subfields(record["680"], found, keyword)
+    notes = record.get_fields("680")
+    found, note = fetch_fieldinfo(found, notes, keyword)
     if found:
         return([lccn, header, uf, bt, note])
     else:
