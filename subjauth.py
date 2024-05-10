@@ -1,9 +1,15 @@
 """Extracts genre/form data from LCGFT and LCSH"""
 import sys
+import os
+import argparse
 import csv
 import unicodedata
 from pymarc import MARCReader
 from pymarc.exceptions import PymarcException
+
+HELP = "python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>]"
+reccounter = 0
+hitcounter = 0
 
 def reading_marc(filename):
     """Reads the whole MARC file"""
@@ -11,6 +17,8 @@ def reading_marc(filename):
         with open(filename, 'rb') as fh:
             reader = MARCReader(fh, to_unicode=True, force_utf8=True)
             for record in reader:
+                if record is None:
+                    sys.exit("Problem with MARC file. Record is 'None'.")
                 yield record
     except FileNotFoundError:
         sys.exit(f"MARC file {filename} not found")
@@ -23,107 +31,141 @@ def reading_marc(filename):
 
 def lccnno(record):
   """pulls out 010 $a from the fields collection as an identifier"""
-  lccn = record['010']['a'].strip()
+  try:
+      lccn = record['010']['a'].strip()
+  except Exception:
+      print(f"lccno not found in recno {reccounter}")
+      lccn = ""
   return (lccn)
 
-def fetch_gf(lccn, record):
-    """pulls out headings for genre/form (gf) terms and scope note"""
+def analyze_subfields(field, infound, keyword):
+    textstring = ""
+    found = infound
+    subfields = field.subfields
+    for subfield in subfields:
+        key = subfield[0]
+        value = subfield[1]
+        if keyword is not None and not found:
+            words = value.split() 
+            for word in words:
+                if word.startswith(keyword):
+                    found = True
+                    break
+        textstring = textstring + "$" + key + " " + value + " "
+    textstring = textstring.strip()
+    textstring = unicodedata.normalize("NFC", textstring)
+    return([found, textstring])
+
+def fetch_fieldinfo(found, list, keyword):
+    """find data in MARC fields"""
+    value = ""
+    returnval = ""
+    for field in list:
+        if field is not None:
+            found,value = analyze_subfields(field, found, keyword)
+            returnval= returnval + value + " | " 
+    return([found, returnval])
+
+def fetch_results(lccn, record, keyword):
+    """pulls out fields for keyword terms and scope note"""
     header = ""
     note = ""
-    subfields = record["155"].subfields
-    keys = subfields[::2]
-    values = subfields[1::2]
-    for i in range(0, len(keys)):
-        header = header + "$" + keys[i] + " " + values[i] + " "
-    header = header.strip()
-    header = unicodedata.normalize("NFC", header)
-    print(header)
-    if record["680"] is not None and record["680"]["i"] is not None:
-        subfields = record["680"].subfields
-        keys = subfields[::2]
-        values = subfields[1::2]
-        for i in range(0, len(keys)):
-            note = note + " " + values[i]
-        note = unicodedata.normalize("NFC", note)
-    return([lccn, header, note])
-
-def fetch_sh(lccn, record):
-    """pulls out form subdivisions for subject (sh) headings and scope note"""
-    header = ""
-    note = ""
-    subfields = record["185"].subfields
-    keys = subfields[::2]
-    values = subfields[1::2]
-    for i in range(0, len(keys)):
-        header = header + "$" + keys[i] + " " + values[i] + " "
-    header = header.strip()
-    header = unicodedata.normalize("NFC", header)
-    if record["680"] is not None and record["680"]["i"] is not None:
-        subfields = record["680"].subfields
-        keys = subfields[::2]
-        values = subfields[1::2]
-        for i in range(0, len(keys)):
-            note = note + " " + values[i]
-        note = unicodedata.normalize("NFC", note)
-    return([lccn, header, note])
+    found = False
+    if keyword is None:
+        found = True
+    headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "185")
+    found, header = fetch_fieldinfo(found, headers, keyword)
+    #print(header)
+    ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "485")
+    found, uf = fetch_fieldinfo(found, ufs, keyword)
+    #print(uf)
+    bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "585")
+    found, bt = fetch_fieldinfo(found, bts, keyword)
+    #print(bt)
+    notes = record.get_fields("680")
+    found, note = fetch_fieldinfo(found, notes, keyword)
+    if found:
+        return([lccn, header, uf, bt, note])
+    else:
+        return(None)
 
 
-def processrecord(filename, type):
-    """processes records in file based on type, whch is either "gf" or "sh" """
+def processrecord(filename, type, keyword):
+    """processes records in file based on type, whch is [sh | fd | gd | dg | gf | sj | mp] """
+    global reccounter
     marc_gen = reading_marc(filename)
     for record in marc_gen:
+        reccounter = reccounter + 1
+        result = None
         lccn = lccnno(record)
-        if lccn.startswith(type):
-            if type == "sh" and record["185"] is not None and record["185"]["v"] is not None:
-                yield(fetch_sh(lccn, record))
+        prefix = type
+        if type == "fd":
+            prefix = "sh"
+        if lccn.startswith(prefix):
+            if type == "fd" and record["185"] is not None and record["185"]["v"] is not None:
+                result = fetch_results(lccn, record, keyword)
+            if type == "gd" and record["185"] is not None and record["185"]["x"] is not None:
+                result = fetch_results(lccn, record, keyword)
+            elif type == "sh":
+                result = fetch_results(lccn, record, keyword)
+            elif type == "sj":
+                result = fetch_results(lccn, record, keyword)
+            elif type == "dg" and record["150"] is not None and record["150"]["a"] is not None:
+                result = fetch_results(lccn, record, keyword)
+            elif type == "mp" and record["162"] is not None and record["162"]["a"] is not None:
+                result = fetch_results(lccn, record, keyword)
             elif type == "gf" and record["155"] is not None and record["155"]["a"] is not None:
-                yield(fetch_gf(lccn, record))
+                result = fetch_results(lccn, record, keyword)
+            if result is not None and result[1] is not None:
+                yield(result)
 
 
-def processfile(filename, type, csvfile):
+def processfile(filename, type, csvfile, keyword):
     """looks at each record according to type to extract data to a csv file"""
-    with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
-        wr = csv.writer(myfile)
-        for line in processrecord(filename, type):
-            wr.writerow(line)
+    global hitcounter
+    try:
+        with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
+            wr = csv.writer(myfile)
+            for line in processrecord(filename, type, keyword):
+                hitcounter = hitcounter + 1
+                try:
+                    if line is not None:
+                        wr.writerow(line)
+                except Exception as e:
+                    sys.exit(f"Problem writing line '{line}' {e.__class__.__doc__} ")
+    except Exception as e:
+        sys.exit(f"Problem found in writing to {csvfile}: {e.__class__.__doc__} [{e.__class__.__name__}]")
 
 if __name__ == "__main__":
     # command line arguments
-    n = len(sys.argv)
-    if n < 4:
-        sys.exit("Missing arguments. \n python subjauth.py {input file path} [-sh {sh csv path}] [-gf {gf cvs path}]")
+    parser = argparse.ArgumentParser(description='Get options.')
+    parser.add_argument("filename", help="Path to marc file required.")
+    parser.add_argument("-type", choices=["sh", "fd", "gd", "dg", "gf", "sj", "mp"], required=True)
+    parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
+    parser.add_argument("-o", help="Path to csv file output required.", required=True, metavar="output")
+    args = parser.parse_args()
+    #print("we parsed")
     
-    sh = False
-    gf = False
-    shfile = ""
-    gffile = ""
-    filename = sys.argv[1]
-    if '-h' in sys.argv:
-        sys.exit("python subjauth.py {input file path} [-sh {sh csv path}] [-gf {gf cvs path}]")
+    keyword = None    
+    filename = args.filename
+    type = args.type
+    csvfile = args.o
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
+    if not os.path.exists(filename):
+        sys.exit(f"{filename} not found")
+    if args.key:
+        keyword = args.key 
+    print(f"{filename} {type} {csvfile} {keyword}")
+#update to tell them what we are about to do; also ReadMe file for help 2024-02-09
+    if keyword is not None:
+        keyword = keyword.strip()
+        keyword = unicodedata.normalize("NFC", keyword)
+    processfile(filename, type, csvfile, keyword)
+    print(f"{reccounter} read, {hitcounter} found")
 
-    for i in range(2,n):
-        
-        if sys.argv[i] == "-sh":
-            sh = True
-            if i+1 < n and sys.argv[i+1][0] != "-":
-                shfile = sys.argv[i+1]
-            else:
-                sh = False
-                print("No shfile specified")
-        if sys.argv[i] == "-gf":
-            gf = True
-            if i+1 < n and sys.argv[i+1][0] != "-":
-                gffile = sys.argv[i+1]
-            else:
-                gf = False
-                print("No gffile specified")   
-    if not (sh or gf):
-        sys.exit("No authority record type specified")
-    
-    """functions that process the file by type"""
-    if sh:
-        processfile(filename, "sh", shfile)
-    if gf:
-        processfile(filename, "gf", gffile)
+'''
+figure out why filename isn't recognized as an argument 2024-02-23
+Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note).
+'''
+

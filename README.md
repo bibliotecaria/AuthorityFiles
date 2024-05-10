@@ -21,6 +21,7 @@ The current functions cover:
 | ------------- | ------------- |
 | -sh  | Subject authority records; requires a filepath to output csv file  |
 | -gf  | Genre/Form authority records; requires a filepath to output csv file |
+| -key  | Subject authority records Keyword search |
 
 **The CSV file**
 
