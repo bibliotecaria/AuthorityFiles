@@ -75,13 +75,13 @@ def fetch_results(lccn, record, keyword):
         found = True
     headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "185")
     found, header = fetch_fieldinfo(found, headers, keyword)
-    print(header)
+    #print(header)
     ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "485")
     found, uf = fetch_fieldinfo(found, ufs, keyword)
-    print(uf)
+    #print(uf)
     bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "585")
     found, bt = fetch_fieldinfo(found, bts, keyword)
-    print(bt)
+    #print(bt)
     notes = record.get_fields("680")
     found, note = fetch_fieldinfo(found, notes, keyword)
     if found:
@@ -128,7 +128,6 @@ def processfile(filename, type, csvfile, keyword):
             wr = csv.writer(myfile)
             for line in processrecord(filename, type, keyword):
                 hitcounter = hitcounter + 1
-                print(line.__class__.__name__)
                 try:
                     if line is not None:
                         wr.writerow(line)
@@ -145,21 +144,23 @@ if __name__ == "__main__":
     parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
     parser.add_argument("-o", help="Path to csv file output required.", required=True, metavar="output")
     args = parser.parse_args()
-    print("we parsed")
+    #print("we parsed")
     
     keyword = None    
     filename = args.filename
     type = args.type
     csvfile = args.o
-    print(f"{filename} {type} {csvfile} {keyword}")
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
     if not os.path.exists(filename):
         sys.exit(f"{filename} not found")
     if args.key:
         keyword = args.key 
+    print(f"{filename} {type} {csvfile} {keyword}")
 #update to tell them what we are about to do; also ReadMe file for help 2024-02-09
-
+    if keyword is not None:
+        keyword = keyword.strip()
+        keyword = unicodedata.normalize("NFC", keyword)
     processfile(filename, type, csvfile, keyword)
     print(f"{reccounter} read, {hitcounter} found")
 
