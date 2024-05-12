@@ -1,5 +1,5 @@
 # AuthorityFiles
-TO BE UPDATED
+UPDATES in process
 
 **Statement of Purpose**
 
