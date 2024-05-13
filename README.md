@@ -27,13 +27,13 @@ The current functions cover:
 
 | Option  | Explanation |
 | ------------- | ------------- |
-| -type sh  | Subject authority records; requires a filepath to output csv file  |
-| -type fd  | Subject authority records for form subdivisions; requires a filepath to output csv file  |
-| -type gd  | Subject authority records for general subdivisions; requires a filepath to output csv file  |
-| -type sj  | Children's Subject authority records; requires a filepath to output csv file |
-| -type gf  | Genre/Form authority records; requires a filepath to output csv file |
-| -type dg  | Demographic Group Terms authority records; requires a filepath to output csv file |
-| -type mp  | Medium of Performance Terms authority records; requires a filepath to output csv file |
+| -type sh  | Subject authority records  |
+| -type fd  | Subject authority records for form subdivisions  |
+| -type gd  | Subject authority records for general subdivisions  |
+| -type sj  | Children's Subject authority records |
+| -type gf  | Genre/Form authority records |
+| -type dg  | Demographic Group Terms authority records |
+| -type mp  | Medium of Performance Terms authority records |
 | -o  | Output location and filename for csv file |
 | -key  | Authority records Keyword search (phrases in quotes) |
 
