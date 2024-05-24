@@ -3,20 +3,21 @@ UPDATES in process
 
 **Statement of Purpose**
 
-This Python 3 program extracts data from MARC authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet.
+This Python 3 program extracts data from MARC8 authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet. The program will only extract data from one type of authority file at a time. An optional keyword can be specified to search all fields and output only those records that contain the keyword. 
 
 It uses the specialzed Python library [pymarc](https://pymarc.readthedocs.io/en/latest/) to handle the [MARC Format](https://www.loc.gov/marc/) as well as several standard Python libraries.
 
-The current functions cover:
+The current functions cover the extraction of:
 
-+ extracting headings from [Library of Congress Subject Headings](https://www.loc.gov/aba/publications/FreeLCSH/freelcsh.html)
-+ extracting form subdivisions from [Library of Congress Subject Headings](https://www.loc.gov/aba/publications/FreeLCSH/freelcsh.html)
-+ extracting general subdivisions from [Library of Congress Subject Headings](https://www.loc.gov/aba/publications/FreeLCSH/freelcsh.html)
-+ extracting headings from [Library of Congress Children Subject Headings (CYAC)](https://www.loc.gov/aba/publications/FreeCYAC/freecyac.html)
-+ extracting all headings from the [Library of Congress Genre/Form Terms](https://www.loc.gov/aba/publications/FreeLCGFT/freelcgft.html)
-+ extracting headings from [Library of Congress Demographic Group Terms](https://www.loc.gov/aba/publications/FreeLCdgt/freelcdgt.html)
-+ extracting headings from [Library of Congress Medium of Performance Terms](https://www.loc.gov/aba/publications/FreeLCMPY/freelcmpt.html)
++ general headings from [Library of Congress Subject Headings](https://www.loc.gov/aba/publications/FreeLCSH/freelcsh.html)
++ general subdivision headings from [Library of Congress Subject Headings](https://www.loc.gov/aba/publications/FreeLCSH/freelcsh.html)
++ form subdivision headings from [Library of Congress Subject Headings](https://www.loc.gov/aba/publications/FreeLCSH/freelcsh.html)
++ headings from [Library of Congress Children Subject Headings (CYAC)](https://www.loc.gov/aba/publications/FreeCYAC/freecyac.html)
++ headings from the [Library of Congress Genre/Form Terms](https://www.loc.gov/aba/publications/FreeLCGFT/freelcgft.html)
++ headings from [Library of Congress Demographic Group Terms](https://www.loc.gov/aba/publications/FreeLCdgt/freelcdgt.html)
++ headings from [Library of Congress Medium of Performance Terms](https://www.loc.gov/aba/publications/FreeLCMPY/freelcmpt.html)
 
+A freely available copy of the Library of Congress Subject Headings authority file in MARC8 is available via the [MARC Distribution Services](https://www.loc.gov/cds/products/MDSConnect-subject_authorities.html).
 
 
 **How to run the program**
