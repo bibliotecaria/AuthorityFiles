@@ -99,8 +99,8 @@ def processrecord(filename, type, keyword):
         result = None
         lccn = lccnno(record)
         prefix = type
-        if type == "fd":
-            prefix = "sh"
+        if type == "fd" or "gd":
+            prefix == "sh"
         if lccn.startswith(prefix):
             if type == "fd" and record["185"] is not None and record["185"]["v"] is not None:
                 result = fetch_results(lccn, record, keyword)
