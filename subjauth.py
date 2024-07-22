@@ -99,25 +99,30 @@ def processrecord(filename, type, keyword):
         result = None
         lccn = lccnno(record)
         prefix = type
+        if lccn.strip() == "sh 99001357":
+            print(lccn)
         if type == "fd" or "gd":
-            prefix == "sh"
-        if lccn.startswith(prefix):
-            if type == "fd" and record["185"] is not None and record["185"]["v"] is not None:
-                result = fetch_results(lccn, record, keyword)
-            if type == "gd" and record["185"] is not None and record["185"]["x"] is not None:
-                result = fetch_results(lccn, record, keyword)
-            elif type == "sh":
-                result = fetch_results(lccn, record, keyword)
-            elif type == "sj":
-                result = fetch_results(lccn, record, keyword)
-            elif type == "dg" and record["150"] is not None and record["150"]["a"] is not None:
-                result = fetch_results(lccn, record, keyword)
-            elif type == "mp" and record["162"] is not None and record["162"]["a"] is not None:
-                result = fetch_results(lccn, record, keyword)
-            elif type == "gf" and record["155"] is not None and record["155"]["a"] is not None:
-                result = fetch_results(lccn, record, keyword)
-            if result is not None and result[1] is not None:
-                yield(result)
+            prefix = "sh"
+        try:
+            if lccn.startswith(prefix):
+                if type == "fd" and record["185"] is not None and record["185"]["v"] is not None:
+                    result = fetch_results(lccn, record, keyword)
+                if type == "gd" and record["185"] is not None and record["185"]["x"] is not None:
+                    result = fetch_results(lccn, record, keyword)
+                elif type == "sh":
+                    result = fetch_results(lccn, record, keyword)
+                elif type == "sj":
+                    result = fetch_results(lccn, record, keyword)
+                elif type == "dg" and record["150"] is not None and record["150"]["a"] is not None:
+                    result = fetch_results(lccn, record, keyword)
+                elif type == "mp" and record["162"] is not None and record["162"]["a"] is not None:
+                    result = fetch_results(lccn, record, keyword)
+                elif type == "gf" and record["155"] is not None and record["155"]["a"] is not None:
+                    result = fetch_results(lccn, record, keyword)
+        except KeyError:
+            pass
+        if result is not None and result[1] is not None:
+            yield(result)
 
 
 def processfile(filename, type, csvfile, keyword):
