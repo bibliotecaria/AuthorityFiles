@@ -37,6 +37,8 @@ def get_notes(sub):
     return(retval)
 
 def get_references(sub):
+    #http://www.loc.gov/mads/rdf/v1#variantLabel
+    seeref = sub["http://www.loc.gov/mads/rdf/v1#variantLabel"]
     return(None)
 
 
