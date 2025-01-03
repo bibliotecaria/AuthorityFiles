@@ -63,6 +63,7 @@ def get_references(record):
     #http://www.loc.gov/mads/rdf/v1#Topic
     key = "http://www.loc.gov/mads/rdf/v1#variantLabel"
     variantlist = []
+    # TODO get references is not working
     reflist = [element for element in record if matches_key(key, element)]
     for ref in reflist:
         if "http://www.loc.gov/mads/rdf/v1#Temporal" not in ref["@type"]:
@@ -70,18 +71,32 @@ def get_references(record):
             label = var["@value"]
             if label not in variantlist:
                 variantlist.append(label)
-    return(None)
+    return(" | ".join(variantlist))
 
 
 def process_record(sub):
     authlabel = get_authlabel(sub)
+    variants = get_references(sub)
+
+
+def requesting(url):
+    record = None
+    req = requests.get(url)
+    if req.status_code == 200:
+    # requests will follow redirects
+        record = json.loads(req.text)
+    # TODO: log status errors
+    return(record)
 
 def process_uri(uri):
-    # construct URN from URI
+    # construct URL from URI
+    temp = uri.split(":")
+    url = "https:" + temp[1] + ".madsrdf.json"
     # get record from API
     # create sub
     # call process_record, which will return a hash
     # put hash on hash stack by URI as key
+    return(None)
 
 if __name__ == "__main__":
     # command line arguments
@@ -98,10 +113,10 @@ if __name__ == "__main__":
         baseuri = "http" + PREFIX + TYPE[id[0:2]] + id
         url = baseuri + ".madsrdf.json"
     print(url)
-    req = requests.get(url)
-    #requests will follow redirects
-    record = json.loads(req.text)
-    get_references(record)
+    record = requesting(url)
+    if record is None:
+        print("unable to find record")
+        sys.exit()
     matches = []
     for sub in record:
         if sub["@id"] == baseuri:
