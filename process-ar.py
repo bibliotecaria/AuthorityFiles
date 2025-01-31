@@ -26,15 +26,16 @@ TYPE={"mp":"performanceMediums/",
       "dg":"demographicTerms/", 
       "gf":"genreForms/"}
 # recordset contains a list of hashes with two keys: URI, processed(Boolean)
-recordlist = []
+reciplist = []
 recordset = {}
 # TODO how to handle constantly changing list of hashes
 idlist = []
 # here is the list of LCCNs
+start_id = None
 
 def add_to_list(id):
     add = True
-    if id in idlist or id in recordlist.keys():
+    if id in idlist or id in recordset.keys():
         add = False
     return(add)
 
@@ -61,6 +62,8 @@ def get_lccn(sub):
 
 def get_notes(sub):
     #http://www.loc.gov/mads/rdf/v1#note
+    if "http://www.loc.gov/mads/rdf/v1#note" not in sub:
+        return("")
     notes = sub["http://www.loc.gov/mads/rdf/v1#note"]
     retval = ""
     for note in notes:
@@ -73,6 +76,8 @@ def get_references(record):
     #http://www.loc.gov/mads/rdf/v1#ComplexSubject
     #http://www.loc.gov/mads/rdf/v1#Topic
     key = "http://www.loc.gov/mads/rdf/v1#variantLabel"
+    if "http://www.loc.gov/mads/rdf/v1#variantLabel" not in record:
+        return("")
     variantlist = []
     # TODO get references is not working
     reflist = [element for element in record if matches_key(key, element)]
@@ -90,6 +95,8 @@ def get_rel_ids(sub, has):
     #http://www.loc.gov/mads/rdf/v1#hasNarrowerAuthority
     #http://www.loc.gov/mads/rdf/v1#hasReciprocalAuthority
     namespace = "http://www.loc.gov/mads/rdf/v1#has" + has
+    if namespace not in sub:
+        return([])
     auths = sub[namespace]
     ids = []
     for auth in auths:
@@ -108,6 +115,9 @@ def process_sub(sub):
     broads = get_rel_ids(sub, "BroaderAuthority")
     narrows = get_rel_ids(sub, "NarrowerAuthority")
     reciprocals = get_rel_ids(sub, "ReciprocalAuthority")
+    for r in reciprocals:
+        if r not in reciplist:
+            reciplist.append(r)
     return(authlabel, notes, broads, narrows, reciprocals)
 
 def requesting(url):
@@ -178,12 +188,24 @@ def process_id(id):
 
 def refine_recordset():
     # TODO find authlabel for BTid, NTid, RTid
-    pass
+    for id in recordset.keys():
+        for term in ["broads", "narrows", "reciprocals"]:
+            termstring = ""
+            for r_id in recordset[id][term]:
+                termstring += recordset[r_id]["authlabel"] + " | " 
+            recordset[term] = termstring
 
 def process_list():
     for id in idlist:
         process_id(id)
+    for r in reciplist:
+        #handle ids of reciplist to get authlabel, check to make sure not already called
+        pass
 
+
+def write_csv():
+    # LCCN, authlabel, variantlabel, broader terms, narrower terms, reciprocal terms, notes
+    pass
 
 if __name__ == "__main__":
     # command line arguments
@@ -193,6 +215,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     #print("we parsed")
     id = args.id.replace(" ","")
+    start_id = id
     idlist.append(id)
     process_list()
     refine_recordset()
