@@ -32,6 +32,7 @@ recordset = {}
 idlist = []
 # here is the list of LCCNs
 start_id = None
+direction = None
 
 def add_to_list(id):
     add = True
@@ -95,6 +96,7 @@ def get_rel_ids(sub, has):
     #http://www.loc.gov/mads/rdf/v1#hasNarrowerAuthority
     #http://www.loc.gov/mads/rdf/v1#hasReciprocalAuthority
     namespace = "http://www.loc.gov/mads/rdf/v1#has" + has
+    is_recip = has == "ReciprocalAuthority"
     if namespace not in sub:
         return([])
     auths = sub[namespace]
@@ -104,7 +106,7 @@ def get_rel_ids(sub, has):
         if uri is not None:
             id = uri.split("/")[-1]
             ids.append(id)
-            if add_to_list(id):
+            if not is_recip and add_to_list(id):
                 idlist.append(id)
     return(ids)
 
@@ -115,6 +117,7 @@ def process_sub(sub):
     broads = get_rel_ids(sub, "BroaderAuthority")
     narrows = get_rel_ids(sub, "NarrowerAuthority")
     reciprocals = get_rel_ids(sub, "ReciprocalAuthority")
+    # TODO only get narrower or broader based on direction
     for r in reciprocals:
         if r not in reciplist:
             reciplist.append(r)
@@ -198,9 +201,9 @@ def refine_recordset():
 def process_list():
     for id in idlist:
         process_id(id)
-    for r in reciplist:
-        #handle ids of reciplist to get authlabel, check to make sure not already called
-        pass
+    for r_id in reciplist:
+        if r_id not in recordset.keys():
+            process_id(r_id)
 
 
 def write_csv():
@@ -212,8 +215,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get options.')
     parser.add_argument("-o", help="Path to csv file output required.", required=True, metavar="output")
     parser.add_argument("-id", help="Enter the LCCN. E.g. \"sh 85234587\"")
+    parser.add_argument("-direct", help="Enter N or B to search in the direction of Narrower or Broader Terms.")
     args = parser.parse_args()
-    #print("we parsed")
+    direction = args.direct
+    if direction != "N" or direction != "B":
+        print("Direction must be N or B.")
+        sys.exit(1)
     id = args.id.replace(" ","")
     start_id = id
     idlist.append(id)
