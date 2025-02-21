@@ -8,6 +8,7 @@ To run the search, extract the id.loc.gov URI for the term you want to search, a
 		a. Go through list of dicts until we find the one that matches the @ID key matches the heading
          ID we've entered.
 	4. Establish separate functions for extracting the information from the 010, 1XX, 4XX, 5XX, NTs, and 680.
+    5. Need to search only in one direction, up the BTs or down the NTs, but not the RTs.
 Need to maintain a list of already-processed headings so as not to repeat recursion.
 '''
 
@@ -80,7 +81,6 @@ def get_references(record):
     if "http://www.loc.gov/mads/rdf/v1#variantLabel" not in record:
         return("")
     variantlist = []
-    # TODO get references is not working
     reflist = [element for element in record if matches_key(key, element)]
     for ref in reflist:
         if "http://www.loc.gov/mads/rdf/v1#Temporal" not in ref["@type"]:
@@ -97,6 +97,7 @@ def get_rel_ids(sub, has):
     #http://www.loc.gov/mads/rdf/v1#hasReciprocalAuthority
     namespace = "http://www.loc.gov/mads/rdf/v1#has" + has
     is_recip = has == "ReciprocalAuthority"
+    can_append = (direction == "N" and has == "NarrowerAuthority") or (direction == "B" and has == "BroaderAuthority")
     if namespace not in sub:
         return([])
     auths = sub[namespace]
@@ -106,24 +107,26 @@ def get_rel_ids(sub, has):
         if uri is not None:
             id = uri.split("/")[-1]
             ids.append(id)
-            if not is_recip and add_to_list(id):
+            if not is_recip and can_append and add_to_list(id):
                 idlist.append(id)
     return(ids)
 
 def process_sub(sub):
-    # here is where we extract data from subs of the record
+    # here is where we extract data from subs of the record. For the broads, narrows, and reciprocals, it is just an ID.
     authlabel = get_authlabel(sub)
     notes = get_notes(sub)
     broads = get_rel_ids(sub, "BroaderAuthority")
     narrows = get_rel_ids(sub, "NarrowerAuthority")
     reciprocals = get_rel_ids(sub, "ReciprocalAuthority")
-    # TODO only get narrower or broader based on direction
+    # TODO only get narrower or broader based on direction 
+    # TODO AND create list like reciplist for not chosen direction
     for r in reciprocals:
         if r not in reciplist:
             reciplist.append(r)
     return(authlabel, notes, broads, narrows, reciprocals)
 
 def requesting(url):
+    #request will obtain data from the URL, loading it in JSON format
     record = None
     req = requests.get(url)
     if req.status_code == 200:
@@ -218,7 +221,7 @@ if __name__ == "__main__":
     parser.add_argument("-direct", help="Enter N or B to search in the direction of Narrower or Broader Terms.")
     args = parser.parse_args()
     direction = args.direct
-    if direction != "N" or direction != "B":
+    if direction != "N" and direction != "B":
         print("Direction must be N or B.")
         sys.exit(1)
     id = args.id.replace(" ","")
