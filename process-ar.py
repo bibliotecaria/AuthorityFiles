@@ -27,7 +27,7 @@ TYPE={"mp":"performanceMediums/",
       "dg":"demographicTerms/", 
       "gf":"genreForms/"}
 # recordset contains a list of hashes with two keys: URI, processed(Boolean)
-reciplist = []
+authlabel_only = []
 recordset = {}
 # TODO how to handle constantly changing list of hashes
 idlist = []
@@ -96,8 +96,7 @@ def get_rel_ids(sub, has):
     #http://www.loc.gov/mads/rdf/v1#hasNarrowerAuthority
     #http://www.loc.gov/mads/rdf/v1#hasReciprocalAuthority
     namespace = "http://www.loc.gov/mads/rdf/v1#has" + has
-    is_recip = has == "ReciprocalAuthority"
-    can_append = (direction == "N" and has == "NarrowerAuthority") or (direction == "B" and has == "BroaderAuthority")
+    can_append = ((direction == "N" and has == "NarrowerAuthority") or (direction == "B" and has == "BroaderAuthority"))
     if namespace not in sub:
         return([])
     auths = sub[namespace]
@@ -107,22 +106,32 @@ def get_rel_ids(sub, has):
         if uri is not None:
             id = uri.split("/")[-1]
             ids.append(id)
-            if not is_recip and can_append and add_to_list(id):
+            if can_append and add_to_list(id):
                 idlist.append(id)
     return(ids)
 
-def process_sub(sub):
+def add_labelonly(list):
+    for r in list:
+        if r not in authlabel_only:
+            authlabel_only.append(r)
+
+
+def process_sub(sub, labelonly = False):
     # here is where we extract data from subs of the record. For the broads, narrows, and reciprocals, it is just an ID.
     authlabel = get_authlabel(sub)
+    if labelonly:
+        return(authlabel, None, None, None, None)
     notes = get_notes(sub)
     broads = get_rel_ids(sub, "BroaderAuthority")
     narrows = get_rel_ids(sub, "NarrowerAuthority")
     reciprocals = get_rel_ids(sub, "ReciprocalAuthority")
     # TODO only get narrower or broader based on direction 
     # TODO AND create list like reciplist for not chosen direction
-    for r in reciprocals:
-        if r not in reciplist:
-            reciplist.append(r)
+    add_labelonly(reciprocals)
+    if direction == "N":
+        add_labelonly(broads)
+    else:
+        add_labelonly(narrows)
     return(authlabel, notes, broads, narrows, reciprocals)
 
 def requesting(url):
@@ -174,7 +183,7 @@ def handle_id(id):
     return(variants, sub_groups)
     # needs to move process_record(sub_groups[0])
 
-def process_id(id):
+def process_id(id, labelonly =  False):
     # here is where we create URI and URL (in subroutine), get data, also subprocessing for data
     variants, subs = handle_id(id)
     if variants is None and subs is None:
@@ -182,7 +191,7 @@ def process_id(id):
         return()
     # TODO define what is returned
     # recordset needs LCCN, authlabel, variants, notes, BTid, NTid, RTid
-    authlabel, notes, broads, narrows, reciprocals = process_sub(subs[0])
+    authlabel, notes, broads, narrows, reciprocals = process_sub(subs[0], labelonly)
     # recordset["sh3443"] = {'auth'='foo', 'variant'=[alist],'notes'=[listof notes], 'bIds='sh233|sh99'}
     recordset[id] = {
         "authlabel":authlabel, 
@@ -204,9 +213,9 @@ def refine_recordset():
 def process_list():
     for id in idlist:
         process_id(id)
-    for r_id in reciplist:
+    for r_id in authlabel_only:
         if r_id not in recordset.keys():
-            process_id(r_id)
+            process_id(r_id, True)
 
 
 def write_csv():
