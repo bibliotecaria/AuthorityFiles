@@ -120,7 +120,7 @@ def process_sub(sub, labelonly = False):
     # here is where we extract data from subs of the record. For the broads, narrows, and reciprocals, it is just an ID.
     authlabel = get_authlabel(sub)
     if labelonly:
-        return(authlabel, None, None, None, None)
+        return(authlabel, "", [], [], [])
     notes = get_notes(sub)
     broads = get_rel_ids(sub, "BroaderAuthority")
     narrows = get_rel_ids(sub, "NarrowerAuthority")
@@ -208,7 +208,7 @@ def refine_recordset():
             termstring = ""
             for r_id in recordset[id][term]:
                 termstring += recordset[r_id]["authlabel"] + " | " 
-            recordset[term] = termstring
+            recordset[id][term] = termstring
 
 def process_list():
     for id in idlist:
@@ -219,8 +219,19 @@ def process_list():
 
 
 def write_csv():
+    heads = ["authlabel", "variants", "broads", "narrows", "reciprocals", "notes"]
     # LCCN, authlabel, variantlabel, broader terms, narrower terms, reciprocal terms, notes
-    pass
+    try:
+        with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
+            wr = csv.writer(myfile)
+            wr.writerow(["LCCN", "Heading", "Variants", "Broader", "Narrower", "Related", "Notes"])
+            for id in recordset.keys():
+                line = [id]
+                for h in heads:
+                    line.append(recordset[id][h])
+                wr.writerow(line)
+    except Exception as e:
+        sys.exit(f"Problem found in writing to {csvfile}: {e.__class__.__doc__} [{e.__class__.__name__}]")
 
 if __name__ == "__main__":
     # command line arguments
@@ -240,6 +251,7 @@ if __name__ == "__main__":
     refine_recordset()
     # TODO write out recordset
     csvfile = args.o
+    write_csv()
 
 
 
