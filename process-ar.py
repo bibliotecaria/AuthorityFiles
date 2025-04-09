@@ -1,16 +1,4 @@
-'''This program will search the authority file based on the identifier entered 
-and then search up and down the hierarchy of the term.
-To run the search, extract the id.loc.gov URI for the term you want to search, and plug that into the program that will be created.
-	1. JSON file is organized as an array of dicts. We are looking for the specific one in which the last part of the character of the @id key matches the LCCN that we have plugged in.
-		a. Make sure to remove space from LCCN.
-	2. Get a heading ID (the LCCN transformed for the URI) and fetch the JSON based on that ID
-	3. Identify the hash (or dict) in the JSON array that contains the information desired.
-		a. Go through list of dicts until we find the one that matches the @ID key matches the heading
-         ID we've entered.
-	4. Establish separate functions for extracting the information from the 010, 1XX, 4XX, 5XX, NTs, and 680.
-    5. Need to search only in one direction, up the BTs or down the NTs, but not the RTs.
-Need to maintain a list of already-processed headings so as not to repeat recursion.
-'''
+# This program will search the authority file based on the identifier entered and then search the broader and narrower hierarchy of the term, depending on selection.
 
 import sys
 import requests
@@ -19,20 +7,16 @@ import argparse
 import csv
 
 
-
 PREFIX="://id.loc.gov/authorities/"
 TYPE={"mp":"performanceMediums/",
       "sh":"subjects/", 
       "sj":"childrensSubjects/", 
       "dg":"demographicTerms/", 
       "gf":"genreForms/"}
-# recordset contains a list of hashes with two keys: URI, processed(Boolean)
+# recordset contains a list of hashes with a key of ID(LCCN). Hashes include ID, authlabel, variants, broader terms, narrower terms, reciprocal terms, and note from a MARC authority record.
 authlabel_only = []
 recordset = {}
-# TODO how to handle constantly changing list of hashes
 idlist = []
-# here is the list of LCCNs
-start_id = None
 direction = None
 
 def add_to_list(id):
@@ -67,19 +51,13 @@ def get_notes(sub):
     if "http://www.loc.gov/mads/rdf/v1#note" not in sub:
         return("")
     notes = sub["http://www.loc.gov/mads/rdf/v1#note"]
-    retval = ""
+    retval = []
     for note in notes:
-        retval = note["@value"] + " | "
-    return(retval)
+        retval.append(note["@value"])
+    return(" | ".join(retval))
 
 def get_references(record):
-    #http://www.loc.gov/mads/rdf/v1#variantLabel
-    #http://www.loc.gov/mads/rdf/v1#Temporal
-    #http://www.loc.gov/mads/rdf/v1#ComplexSubject
-    #http://www.loc.gov/mads/rdf/v1#Topic
     key = "http://www.loc.gov/mads/rdf/v1#variantLabel"
-    if "http://www.loc.gov/mads/rdf/v1#variantLabel" not in record:
-        return("")
     variantlist = []
     reflist = [element for element in record if matches_key(key, element)]
     for ref in reflist:
@@ -88,6 +66,8 @@ def get_references(record):
             label = var["@value"]
             if label not in variantlist:
                 variantlist.append(label)
+    if len(variantlist) == 0:
+        return("")
     return(" | ".join(variantlist))
 
 def get_rel_ids(sub, has):
@@ -115,9 +95,8 @@ def add_labelonly(list):
         if r not in authlabel_only:
             authlabel_only.append(r)
 
-
 def process_sub(sub, labelonly = False):
-    # here is where we extract data from subs of the record. For the broads, narrows, and reciprocals, it is just an ID.
+    # here is where we extract data from sub-records of the record. For the broads, narrows, and reciprocals, it is just an ID.
     authlabel = get_authlabel(sub)
     if labelonly:
         return(authlabel, "", [], [], [])
@@ -125,8 +104,6 @@ def process_sub(sub, labelonly = False):
     broads = get_rel_ids(sub, "BroaderAuthority")
     narrows = get_rel_ids(sub, "NarrowerAuthority")
     reciprocals = get_rel_ids(sub, "ReciprocalAuthority")
-    # TODO only get narrower or broader based on direction 
-    # TODO AND create list like reciplist for not chosen direction
     add_labelonly(reciprocals)
     if direction == "N":
         add_labelonly(broads)
@@ -141,21 +118,11 @@ def requesting(url):
     if req.status_code == 200:
     # requests will follow redirects
         record = json.loads(req.text)
-    # TODO log status errors
+    else:
+        print(f"Unable to retrieve [{url}]. Status code is {req.status_code}")
     return(record)
 
-def process_uri(uri):
-    # construct URL from URI
-    temp = uri.split(":")
-    url = "https:" + temp[1] + ".madsrdf.json"
-    # get record from API
-    # create sub
-    # call process_record, which will return a hash
-    # put hash on hash stack by URI as key
-    return(None)
-
 def handle_id(id):
-    # needs to return status because sys.exit won't work here -- need TRUE/FALSE for testing
     # take id and make full madsrdf.json record from which to extract data via API
     id = id.replace(" ","")
     if id[0:2] not in TYPE:
@@ -168,31 +135,26 @@ def handle_id(id):
     print(url)
     record = requesting(url)
     if record is None:
-        print("unable to find record")
         return(None, None)
     variants = get_references(record)
     sub_groups = []
     for sub in record:
         if sub["@id"] == baseuri:
             sub_groups.append(sub)
-    #make sure that at least one match, report out of there is more than one match
+    #make sure that at least one match, report out if there is more than one match
     if len(sub_groups) == 0:
-        print(f"No sub groups in {id}.")
+        print(f"No sub elements matching the URI [{baseuri}] for {id}.")
     elif len(sub_groups) > 1:
-        print(f"{id} has more than one ID sub group")
+        print(f"{id} has more than one ID sub element group. First one will be processed.")
     return(variants, sub_groups)
-    # needs to move process_record(sub_groups[0])
 
-def process_id(id, labelonly =  False):
-    # here is where we create URI and URL (in subroutine), get data, also subprocessing for data
+def process_id(id, labelonly = False):
+    # labelonly is used to tell us the IDs that don´t need information other than the authlabels
     variants, subs = handle_id(id)
     if variants is None and subs is None:
-        print("Cannot find information")
+        print("Cannot find information. No variants or sub elements are found.")
         return()
-    # TODO define what is returned
-    # recordset needs LCCN, authlabel, variants, notes, BTid, NTid, RTid
     authlabel, notes, broads, narrows, reciprocals = process_sub(subs[0], labelonly)
-    # recordset["sh3443"] = {'auth'='foo', 'variant'=[alist],'notes'=[listof notes], 'bIds='sh233|sh99'}
     recordset[id] = {
         "authlabel":authlabel, 
         "notes":notes, 
@@ -202,13 +164,15 @@ def process_id(id, labelonly =  False):
         "variants":variants}
 
 def refine_recordset():
-    # TODO find authlabel for BTid, NTid, RTid
     for id in recordset.keys():
         for term in ["broads", "narrows", "reciprocals"]:
-            termstring = ""
+            terms = []
             for r_id in recordset[id][term]:
-                termstring += recordset[r_id]["authlabel"] + " | " 
-            recordset[id][term] = termstring
+                if r_id in recordset:
+                    terms.append(recordset[r_id]["authlabel"])
+                else:
+                    print(f"Cannot find term ID {r_id} for {id}.")
+            recordset[id][term] = " | ".join(terms)
 
 def process_list():
     for id in idlist:
@@ -217,21 +181,20 @@ def process_list():
         if r_id not in recordset.keys():
             process_id(r_id, True)
 
-
 def write_csv():
     heads = ["authlabel", "variants", "broads", "narrows", "reciprocals", "notes"]
-    # LCCN, authlabel, variantlabel, broader terms, narrower terms, reciprocal terms, notes
     try:
         with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
             wr = csv.writer(myfile)
             wr.writerow(["LCCN", "Heading", "Variants", "Broader", "Narrower", "Related", "Notes"])
-            for id in recordset.keys():
+            for id in idlist:
                 line = [id]
                 for h in heads:
                     line.append(recordset[id][h])
                 wr.writerow(line)
     except Exception as e:
         sys.exit(f"Problem found in writing to {csvfile}: {e.__class__.__doc__} [{e.__class__.__name__}]")
+
 
 if __name__ == "__main__":
     # command line arguments
@@ -245,18 +208,14 @@ if __name__ == "__main__":
         print("Direction must be N or B.")
         sys.exit(1)
     id = args.id.replace(" ","")
-    start_id = id
     idlist.append(id)
     process_list()
     refine_recordset()
-    # TODO write out recordset
+    if not recordset:
+        print("No information processed.")
+        sys.exit(0)
     csvfile = args.o
     write_csv()
-
-
-
-
-"""     variants, sub_groups = handle_id(id)
-    # TODO handle errors
-    process_record(sub_groups[0])
- """
+    print(f"CSV written to {args.o}")
+    
+#Testing other vocabularies, $z LCCN, and readme file
