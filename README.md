@@ -3,6 +3,21 @@ UPDATES in process
 
 **Statement of Purpose**
 
+This program, given an authority record ID, will access the authority file at https://id.loc.gov and then search the hierarchy of the term for broader and narrower terms. The outputs are a CSV file.
+
+To run the search, enter the identifier (e.g. **sh 89003642**) for the term you want to search.
+
+	1. JSON file is organized as an array of dicts. We are looking for the specific one in which the last part of the character of the @id key matches the LCCN that we have plugged in.
+		a. Make sure to remove space from LCCN.
+	2. Get a heading ID (the LCCN transformed for the URI) and fetch the JSON based on that ID
+	3. Identify the hash (or dict) in the JSON array that contains the information desired.
+		a. Go through list of dicts until we find the one that matches the @ID key matches the heading
+         ID we've entered.
+	4. Establish separate functions for extracting the information from the 010, 1XX, 4XX, 5XX, NTs, and 680.
+    5. Need to search only in one direction, up the BTs or down the NTs, but not the RTs.
+Need to maintain a list of already-processed headings so as not to repeat recursion.
+
+
 This Python 3 program extracts data from MARC8 authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet. The program will only extract data from one type of authority file at a time. An optional keyword can be specified to search all fields and output only those records that contain the keyword. 
 
 It uses the specialzed Python library [pymarc](https://pymarc.readthedocs.io/en/latest/) to handle the [MARC Format](https://www.loc.gov/marc/) as well as several standard Python libraries.

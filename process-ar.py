@@ -33,8 +33,10 @@ def matches_key(key, element):
 
 def get_authlabel(sub):
     #http://www.loc.gov/mads/rdf/v1#authoritativeLabel
-    labels = sub["http://www.loc.gov/mads/rdf/v1#authoritativeLabel"]
     value = None
+    if "http://www.loc.gov/mads/rdf/v1#authoritativeLabel" not in sub:
+        return(value)
+    labels = sub["http://www.loc.gov/mads/rdf/v1#authoritativeLabel"]
     for label in labels:
         if label["@language"] == "en":
             value = label["@value"]
@@ -98,7 +100,7 @@ def add_labelonly(list):
 def process_sub(sub, labelonly = False):
     # here is where we extract data from sub-records of the record. For the broads, narrows, and reciprocals, it is just an ID.
     authlabel = get_authlabel(sub)
-    if labelonly:
+    if labelonly or authlabel is None:
         return(authlabel, "", [], [], [])
     notes = get_notes(sub)
     broads = get_rel_ids(sub, "BroaderAuthority")
@@ -152,9 +154,13 @@ def process_id(id, labelonly = False):
     # labelonly is used to tell us the IDs that don´t need information other than the authlabels
     variants, subs = handle_id(id)
     if variants is None and subs is None:
-        print("Cannot find information. No variants or sub elements are found.")
+        print(f"Cannot find information for {id}. No variants or sub elements are found.")
         return()
     authlabel, notes, broads, narrows, reciprocals = process_sub(subs[0], labelonly)
+    #authlabel is None means we cannot process this record
+    if authlabel is None:
+        print(f"Cannot find information for {id}. Missing authorized label. Possibly a deprecated record?")
+        return()
     recordset[id] = {
         "authlabel":authlabel, 
         "notes":notes, 
@@ -218,4 +224,4 @@ if __name__ == "__main__":
     write_csv()
     print(f"CSV written to {args.o}")
     
-#Testing other vocabularies, $z LCCN, and readme file
+#Readme file
