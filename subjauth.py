@@ -73,13 +73,13 @@ def fetch_results(lccn, record, keyword):
     found = False
     if keyword is None:
         found = True
-    headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "185")
+    headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "180", "185")
     found, header = fetch_fieldinfo(found, headers, keyword)
     #print(header)
-    ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "485")
+    ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "480", "485")
     found, uf = fetch_fieldinfo(found, ufs, keyword)
     #print(uf)
-    bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "585")
+    bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "580", "585")
     found, bt = fetch_fieldinfo(found, bts, keyword)
     #print(bt)
     notes = record.get_fields("680")
@@ -105,7 +105,7 @@ def processrecord(filename, type, keyword):
             if lccn.startswith(prefix):
                 if type == "fd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("v"):
                     result = fetch_results(lccn, record, keyword)
-                elif type == "gd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("x"):
+                elif type == "gd" and record.get_fields("180") and record.get_fields("180")[0].get_subfields("x"):
                     result = fetch_results(lccn, record, keyword)
                 elif type == "sh":
                     result = fetch_results(lccn, record, keyword)
