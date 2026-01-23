@@ -2,7 +2,7 @@
 
 **Statement of Purpose**
 
-This Python 3 program extracts data from MARC8 authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet. The program will only extract data from one type of authority file at a time. An optional keyword can be specified to search all fields and output only those records that contain the keyword. 
+This Python 3 program extracts data from MARC8 authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet. The program will only extract data from one type of authority file at a time. An optional keyword can be specified to search all fields and output only those records that contain the keyword. Another option can be specified to limit output to records containing a specified substring (e.g. "$v").
 
 It uses the specialzed Python library [pymarc](https://pymarc.readthedocs.io/en/latest/) to handle the [MARC Format](https://www.loc.gov/marc/) as well as several standard Python libraries.
 
@@ -21,7 +21,7 @@ A freely available copy of the Library of Congress Subject Headings authority fi
 
 **How to run the program**
 
-`python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>]`
+`python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>] [-sub <substring>]`
 
 ***Options***
 
@@ -36,6 +36,7 @@ A freely available copy of the Library of Congress Subject Headings authority fi
 | -type mp  | Medium of Performance Terms authority records |
 | -o  | Output location and filename for csv file |
 | -key  | Authority records Keyword search (phrases in quotes) |
+| -sub  | Authority records substrings |
 
 **The CSV file**
 
@@ -45,7 +46,7 @@ The output of the CSV file contains three columns:
 + the text of the heading
   + MARC field 1XX $a (with possible additional subfields) for headings in LCSH, LCGFT, LCDGT, CYAC, and LCMPT
   + MARC field 185 $v (with possible additional subfields $v or $x) for LCSH form subdivisions
-  + MARC field 185 $x (with possible additional subfields $v or $x) for LCSH general subdivisions
+  + MARC field 180 $x (with possible additional subfields $v or $x) for LCSH general subdivisions
 + scope note, if one exists
   + MARC field 680 ($i and possible $a subfields)
 
