@@ -66,7 +66,7 @@ def fetch_fieldinfo(found, list, keyword):
             returnval= returnval + value + " | " 
     return([found, returnval])
 
-def fetch_results(lccn, record, keyword):
+def fetch_results(lccn, record, keyword, subfield):
     """pulls out fields for keyword terms and scope note"""
     header = ""
     note = ""
@@ -85,12 +85,18 @@ def fetch_results(lccn, record, keyword):
     notes = record.get_fields("680")
     found, note = fetch_fieldinfo(found, notes, keyword)
     if found:
-        return([lccn, header, uf, bt, note])
+        line = [lccn, header, uf, bt, note]
+        if subfield is not None:
+            for f in line[1:]:
+                if subfield in f:
+                    return(line)
+        else:
+            return(line)
     else:
         return(None)
 
 
-def processrecord(filename, type, keyword):
+def processrecord(filename, type, keyword, subfield):
     """processes records in file based on type, whch is [sh | fd | gd | dg | gf | sj | mp] """
     global reccounter
     marc_gen = reading_marc(filename)
@@ -104,32 +110,32 @@ def processrecord(filename, type, keyword):
         try:
             if lccn.startswith(prefix):
                 if type == "fd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("v"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "gd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("x"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "sh":
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "sj":
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "dg" and record.get_fields("150") and record.get_fields("150")[0].get_subfields("a"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "mp" and record.get_fields("162") and record.get_fields("162")[0].get_subfields("a"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "gf" and record.get_fields("155") and record.get_fields("155")[0].get_subfields("a"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
         except KeyError:
             pass
         if result is not None and result[1] is not None:
             yield(result)
 
 
-def processfile(filename, type, csvfile, keyword):
+def processfile(filename, type, csvfile, keyword, subfield):
     """looks at each record according to type to extract data to a csv file"""
     global hitcounter
     try:
         with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
             wr = csv.writer(myfile)
-            for line in processrecord(filename, type, keyword):
+            for line in processrecord(filename, type, keyword, subfield):
                 hitcounter = hitcounter + 1
                 try:
                     if line is not None:
@@ -145,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("filename", help="Path to marc file required.")
     parser.add_argument("-type", choices=["sh", "fd", "gd", "dg", "gf", "sj", "mp"], required=True)
     parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
+    parser.add_argument("-sub", help="To restrict output to records containing this particular string, enter string exactly.")
     parser.add_argument("-o", help="Path to csv file output required.", required=True, metavar="output")
     args = parser.parse_args()
     #print("we parsed")
@@ -153,18 +160,21 @@ if __name__ == "__main__":
     filename = args.filename
     type = args.type
     csvfile = args.o
+    subfield = None
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
     if not os.path.exists(filename):
         sys.exit(f"{filename} not found")
     if args.key:
-        keyword = args.key 
-    print(f"{filename} {type} {csvfile} {keyword}")
+        keyword = args.key
+    if args.sub:
+        subfield = args.sub 
+    print(f"{filename} {type} {csvfile} {keyword} {subfield}")
 #update to tell them what we are about to do; also ReadMe file for help 2024-02-09
     if keyword is not None:
         keyword = keyword.strip()
         keyword = unicodedata.normalize("NFC", keyword)
-    processfile(filename, type, csvfile, keyword)
+    processfile(filename, type, csvfile, keyword, subfield)
     print(f"{reccounter} read, {hitcounter} found")
 
 '''
