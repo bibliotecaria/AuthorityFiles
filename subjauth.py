@@ -110,9 +110,9 @@ def processrecord(filename, type, keyword, subfield):
         try:
             if lccn.startswith(prefix):
                 if type == "fd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("v"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "gd" and record.get_fields("180") and record.get_fields("180")[0].get_subfields("x"):
-                    result = fetch_results(lccn, record, keyword)
+                    result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "sh":
                     result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "sj":
