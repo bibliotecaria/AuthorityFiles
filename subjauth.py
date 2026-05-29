@@ -70,6 +70,8 @@ def fetch_results(lccn, record, keyword, subfield):
     """pulls out fields for keyword terms and scope note"""
     header = ""
     note = ""
+    list = ""
+    doc = ""
     found = False
     if keyword is None:
         found = True
@@ -82,10 +84,15 @@ def fetch_results(lccn, record, keyword, subfield):
     bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "580", "585")
     found, bt = fetch_fieldinfo(found, bts, keyword)
     #print(bt)
+    docs = record.get_fields("072")
+    found, doc = fetch_fieldinfo(found, docs, keyword)
+    #print(doc)
+    lists = record.get_fields("906")
+    found, list = fetch_fieldinfo(found, lists, keyword)
     notes = record.get_fields("680")
     found, note = fetch_fieldinfo(found, notes, keyword)
     if found:
-        line = [lccn, header, uf, bt, note]
+        line = [lccn, header, uf, bt, note, lists, docs]
         if subfield is not None:
             for f in line[1:]:
                 if subfield in f:
