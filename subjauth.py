@@ -10,6 +10,15 @@ from pymarc.exceptions import PymarcException
 HELP = "python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>]"
 reccounter = 0
 hitcounter = 0
+typecounter = {
+    "sh": 0,
+    "fd": 0,
+    "gd": 0,
+    "dg": 0,
+    "gf": 0,
+    "sj": 0,
+    "mp": 0
+}
 
 def reading_marc(filename):
     """Reads the whole MARC file"""
@@ -70,6 +79,7 @@ def fetch_results(lccn, record, keyword, subfield):
     """pulls out fields for keyword terms and scope note"""
     header = ""
     note = ""
+    org = ""
     list = ""
     doc = ""
     found = False
@@ -84,15 +94,19 @@ def fetch_results(lccn, record, keyword, subfield):
     bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "580", "585")
     found, bt = fetch_fieldinfo(found, bts, keyword)
     #print(bt)
+    orgs = record.get_fields("040")
+    found, org = fetch_fieldinfo(found, orgs, keyword)
+    #print(org)
     docs = record.get_fields("072")
     found, doc = fetch_fieldinfo(found, docs, keyword)
     #print(doc)
     lists = record.get_fields("906")
     found, list = fetch_fieldinfo(found, lists, keyword)
+    #print(list)
     notes = record.get_fields("680")
     found, note = fetch_fieldinfo(found, notes, keyword)
     if found:
-        line = [lccn, header, uf, bt, note, lists, docs]
+        line = [lccn, header, uf, bt, note, org, list, doc]
         if subfield is not None:
             for f in line[1:]:
                 if subfield in f:
@@ -106,31 +120,43 @@ def fetch_results(lccn, record, keyword, subfield):
 def processrecord(filename, type, keyword, subfield):
     """processes records in file based on type, whch is [sh | fd | gd | dg | gf | sj | mp] """
     global reccounter
+    global typecounter
     marc_gen = reading_marc(filename)
     for record in marc_gen:
         reccounter = reccounter + 1
         result = None
         lccn = lccnno(record)
+        if lccn != "":
+            typecounter[lccn[0:2]] += 1
         prefix = type
-        if type == "fd" or "gd":
+        if type == "fd" or type == "gd":
             prefix = "sh"
         try:
+            #TO DO
             if lccn.startswith(prefix):
                 if type == "fd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("v"):
+                    typecounter["fd"] += 1
+                    # fd typecount will only show when fd is type selected
+                    typecounter["sh"] += -1
                     result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "gd" and record.get_fields("180") and record.get_fields("180")[0].get_subfields("x"):
+                    typecounter["gd"] += 1
+                    # gd typecount will only show when gd is type selected
+                    typecounter["sh"] += -1
                     result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "sh":
                     result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "sj":
                     result = fetch_results(lccn, record, keyword, subfield)
-                elif type == "dg" and record.get_fields("150") and record.get_fields("150")[0].get_subfields("a"):
-                    result = fetch_results(lccn, record, keyword, subfield)
+                elif type == "dg":
+                    if record.get_fields("150") and record.get_fields("150")[0].get_subfields("a"):
+                        result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "mp" and record.get_fields("162") and record.get_fields("162")[0].get_subfields("a"):
                     result = fetch_results(lccn, record, keyword, subfield)
                 elif type == "gf" and record.get_fields("155") and record.get_fields("155")[0].get_subfields("a"):
                     result = fetch_results(lccn, record, keyword, subfield)
         except KeyError:
+            print(KeyError)
             pass
         if result is not None and result[1] is not None:
             yield(result)
@@ -142,6 +168,7 @@ def processfile(filename, type, csvfile, keyword, subfield):
     try:
         with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
             wr = csv.writer(myfile)
+            wr.writerow(["LCCN", "Heading", "Variants", "Broader Terms", "Notes", "Organizations", "Monthly list", "SHM docs"])
             for line in processrecord(filename, type, keyword, subfield):
                 hitcounter = hitcounter + 1
                 try:
@@ -163,29 +190,34 @@ if __name__ == "__main__":
     args = parser.parse_args()
     #print("we parsed")
     
-    keyword = None    
+    keyword = None
+    keytext = "[No keyword given]"    
     filename = args.filename
     type = args.type
     csvfile = args.o
     subfield = None
+    subtext = "[No subfield given]"
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
     if not os.path.exists(filename):
         sys.exit(f"{filename} not found")
     if args.key:
         keyword = args.key
+        keytext = keyword
     if args.sub:
         subfield = args.sub 
-    print(f"{filename} {type} {csvfile} {keyword} {subfield}")
-#update to tell them what we are about to do; also ReadMe file for help 2024-02-09
+        subtext = subfield
+    print(f"{filename} {type} {csvfile} {keytext} {subtext}")
+#update to tell them what we are about to do
     if keyword is not None:
         keyword = keyword.strip()
         keyword = unicodedata.normalize("NFC", keyword)
     processfile(filename, type, csvfile, keyword, subfield)
+    for key in typecounter.keys():
+        print(f"{key}: {typecounter[key]}")
     print(f"{reccounter} read, {hitcounter} found")
 
 '''
-figure out why filename isn't recognized as an argument 2024-02-23
-Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note).
+Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note), orgs, list, docs.
 '''
 
