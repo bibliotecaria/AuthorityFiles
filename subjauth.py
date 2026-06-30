@@ -1,4 +1,4 @@
-"""Extracts genre/form data from LCGFT and LCSH"""
+"""Extracts authority record data from MARC records of LCGFT, CYAC, LCSH (including subdivisions), LCDGT, and LCMPT"""
 import sys
 import os
 import argparse
@@ -48,6 +48,7 @@ def lccnno(record):
   return (lccn)
 
 def analyze_subfields(field, infound, keyword):
+    """ creates text string of subfields; checks for keyword match if defined, returning True """
     textstring = ""
     found = infound
     subfields = field.subfields
@@ -75,8 +76,8 @@ def fetch_fieldinfo(found, list, keyword):
             returnval= returnval + value + " | " 
     return([found, returnval])
 
-def fetch_results(lccn, record, keyword, subfield):
-    """pulls out fields for keyword terms and scope note"""
+def fetch_results(lccn, record, keyword):
+    """pulls out fields for keyword terms and scope note and institution code, related document field and project notes; if keyword is defined, it limits results"""
     header = ""
     note = ""
     org = ""
@@ -87,37 +88,26 @@ def fetch_results(lccn, record, keyword, subfield):
         found = True
     headers = record.get_fields("100", "110", "111", "130", "150", "151", "155", "162", "180", "185")
     found, header = fetch_fieldinfo(found, headers, keyword)
-    #print(header)
     ufs = record.get_fields("400", "410", "411", "430", "450", "451", "455", "462", "480", "485")
     found, uf = fetch_fieldinfo(found, ufs, keyword)
-    #print(uf)
     bts = record.get_fields("500", "510", "511", "530", "550", "551", "555", "562", "580", "585")
     found, bt = fetch_fieldinfo(found, bts, keyword)
-    #print(bt)
     orgs = record.get_fields("040")
     found, org = fetch_fieldinfo(found, orgs, keyword)
-    #print(org)
     docs = record.get_fields("072")
     found, doc = fetch_fieldinfo(found, docs, keyword)
-    #print(doc)
     lists = record.get_fields("906")
     found, list = fetch_fieldinfo(found, lists, keyword)
-    #print(list)
     notes = record.get_fields("680")
     found, note = fetch_fieldinfo(found, notes, keyword)
     if found:
         line = [lccn, header, uf, bt, note, org, list, doc]
-        if subfield is not None:
-            for f in line[1:]:
-                if subfield in f:
-                    return(line)
-        else:
-            return(line)
+        return(line)
     else:
         return(None)
 
 
-def processrecord(filename, type, keyword, subfield):
+def processrecord(filename, type, keyword):
     """processes records in file based on type, whch is [sh | fd | gd | dg | gf | sj | mp] """
     global reccounter
     global typecounter
@@ -132,29 +122,28 @@ def processrecord(filename, type, keyword, subfield):
         if type == "fd" or type == "gd":
             prefix = "sh"
         try:
-            #TO DO
             if lccn.startswith(prefix):
                 if type == "fd" and record.get_fields("185") and record.get_fields("185")[0].get_subfields("v"):
                     typecounter["fd"] += 1
                     # fd typecount will only show when fd is type selected
                     typecounter["sh"] += -1
-                    result = fetch_results(lccn, record, keyword, subfield)
+                    result = fetch_results(lccn, record, keyword)
                 elif type == "gd" and record.get_fields("180") and record.get_fields("180")[0].get_subfields("x"):
                     typecounter["gd"] += 1
                     # gd typecount will only show when gd is type selected
                     typecounter["sh"] += -1
-                    result = fetch_results(lccn, record, keyword, subfield)
+                    result = fetch_results(lccn, record, keyword)
                 elif type == "sh":
-                    result = fetch_results(lccn, record, keyword, subfield)
+                    result = fetch_results(lccn, record, keyword)
                 elif type == "sj":
-                    result = fetch_results(lccn, record, keyword, subfield)
+                    result = fetch_results(lccn, record, keyword)
                 elif type == "dg":
                     if record.get_fields("150") and record.get_fields("150")[0].get_subfields("a"):
-                        result = fetch_results(lccn, record, keyword, subfield)
+                        result = fetch_results(lccn, record, keyword)
                 elif type == "mp" and record.get_fields("162") and record.get_fields("162")[0].get_subfields("a"):
-                    result = fetch_results(lccn, record, keyword, subfield)
+                    result = fetch_results(lccn, record, keyword)
                 elif type == "gf" and record.get_fields("155") and record.get_fields("155")[0].get_subfields("a"):
-                    result = fetch_results(lccn, record, keyword, subfield)
+                    result = fetch_results(lccn, record, keyword)
         except KeyError:
             print(KeyError)
             pass
@@ -162,14 +151,14 @@ def processrecord(filename, type, keyword, subfield):
             yield(result)
 
 
-def processfile(filename, type, csvfile, keyword, subfield):
+def processfile(filename, type, csvfile, keyword):
     """looks at each record according to type to extract data to a csv file"""
     global hitcounter
     try:
         with open(csvfile, "w", newline='', encoding='utf-8') as myfile:
             wr = csv.writer(myfile)
             wr.writerow(["LCCN", "Heading", "Variants", "Broader Terms", "Notes", "Organizations", "Monthly list", "SHM docs"])
-            for line in processrecord(filename, type, keyword, subfield):
+            for line in processrecord(filename, type, keyword):
                 hitcounter = hitcounter + 1
                 try:
                     if line is not None:
@@ -184,19 +173,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Get options.')
     parser.add_argument("filename", help="Path to marc file required.")
     parser.add_argument("-type", choices=["sh", "fd", "gd", "dg", "gf", "sj", "mp"], required=True)
-    parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
-    parser.add_argument("-sub", help="To restrict output to records containing this particular string, enter string exactly.")
     parser.add_argument("-o", help="Path to csv file output required.", required=True, metavar="output")
+    parser.add_argument("-key", help="If more than one keyword, enclose in quotes.")
     args = parser.parse_args()
-    #print("we parsed")
     
     keyword = None
     keytext = "[No keyword given]"    
     filename = args.filename
     type = args.type
     csvfile = args.o
-    subfield = None
-    subtext = "[No subfield given]"
     if not filename.endswith(".mrc"):
         sys.exit(f"{filename} not a valid path; must end in .mrc")
     if not os.path.exists(filename):
@@ -204,20 +189,17 @@ if __name__ == "__main__":
     if args.key:
         keyword = args.key
         keytext = keyword
-    if args.sub:
-        subfield = args.sub 
-        subtext = subfield
-    print(f"{filename} {type} {csvfile} {keytext} {subtext}")
-#update to tell them what we are about to do
+    #update to tell them what we are about to do
+    print(f"{filename} {type} {csvfile} {keytext}")
     if keyword is not None:
         keyword = keyword.strip()
         keyword = unicodedata.normalize("NFC", keyword)
-    processfile(filename, type, csvfile, keyword, subfield)
+    processfile(filename, type, csvfile, keyword)
     for key in typecounter.keys():
         print(f"{key}: {typecounter[key]}")
     print(f"{reccounter} read, {hitcounter} found")
 
 '''
-Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note), orgs, list, docs.
+Expected output is: csv file containing LCCN (identifier), 1XX (subject heading), all 4XX (cross-references), 5XX (broader and related terms), 680 (scope note), orgs (040), list (906), docs (072).
 '''
 

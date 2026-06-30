@@ -2,7 +2,7 @@
 
 **Statement of Purpose**
 
-This Python 3 program extracts data from MARC8 authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet. The program will only extract data from one type of authority file at a time. An optional keyword can be specified to search all fields and output only those records that contain the keyword. Another option can be specified to limit output to records containing a specified substring (e.g. "$v").
+This Python 3 program extracts data from MARC8 authority files and outputs it in a CSV format in order to manipulate the data in a spreadsheet. The program will only extract data from one type of authority file at a time. An optional keyword can be specified to search all fields and output only those records that contain the keyword.
 
 It uses the specialzed Python library [pymarc](https://pymarc.readthedocs.io/en/latest/) to handle the [MARC Format](https://www.loc.gov/marc/) as well as several standard Python libraries.
 
@@ -21,7 +21,7 @@ A freely available copy of the Library of Congress Subject Headings authority fi
 
 **How to run the program**
 
-`python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>] [-sub <substring>]`
+`python subjauth.py <input file path> -type [sh | fd | gd | dg | gf | sj | mp] -o <csv path> [-key <keyword string>]`
 
 ***Options***
 
@@ -36,7 +36,6 @@ A freely available copy of the Library of Congress Subject Headings authority fi
 | -type mp  | Medium of Performance Terms authority records |
 | -o  | Output location and filename for csv file |
 | -key  | Authority records Keyword search (phrases in quotes) |
-| -sub  | Authority records substrings |
 
 **The CSV file**
 
@@ -49,6 +48,10 @@ The output of the CSV file contains three columns:
   + MARC field 180 $x (with possible additional subfields $v or $x) for LCSH general subdivisions
 + scope note, if one exists
   + MARC field 680 ($i and possible $a subfields)
++ MARC field 040 (all possible subfields) for organization codes of creators and modifiers of the authority record
++ MARC field 072  (all possible subfields) for alphanumeric code for related documentation 
++ MARC field 906 (all possible subfields) for list number
+
 
 **Contributors**
 
